@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卫星轨道可视化系统</title>
+
+    <!-- Cesium库 -->
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.88/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.88/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+    <!-- 自定义样式 -->
+    <link href="/static/css/styles.css" rel="stylesheet">
+
+    <!-- 全局变量声明 -->
+    <script>
+        // 从Flask模板传递的全局变量
+        window.CESIUM_TOKEN = '{{ cesium_token }}';
+        window.MODEL_URL = '{{ model_url }}';
+        window.CURRENT_TIME_ISO = '{{ current_time_iso }}';
+    </script>
+</head>
+<body>
+    <!-- Cesium容器 -->
+    <div id="cesiumContainer"></div>
+
+    <!-- 加载提示 -->
+    <div id="loadingMessage">
+        正在初始化卫星轨道可视化系统...
+        <div class="status-info" id="statusInfo"></div>
+    </div>
+
+    <!-- 控制面板 -->
+    <div id="controlPanel">
+        <div class="panel-section">
+            <h3>视图控制</h3>
+            <button id="resetView">重置全局视图</button>
+            <button id="showAllSatellites">显示所有卫星</button>
+            <button id="toggleOrbits">切换轨道显示</button>
+            <button id="toggleProjections">切换地面投影</button>
+            <div class="checkbox-group">
+                <input type="checkbox" id="toggleLabels" checked>
+                <label for="toggleLabels">显示卫星标签</label>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h3>侧摆角度控制</h3>
+            <label for="sideAngleInput">侧摆角度 (°):</label>
+            <div class="side-angle-control">
+                <input type="number" id="sideAngleInput" value="20" min="0" max="60" step="1">
+                <button id="updateSideAngle">更新条带</button>
+            </div>
+            <div class="status-info">当前侧摆角度: <span id="currentSideAngle">20°</span></div>
+        </div>
+
+        <div class="panel-section">
+            <h3>时间控制</h3>
+            <label for="timeInput">当前时间:</label>
+            <input type="datetime-local" id="timeInput" value="{{ current_time_iso }}">
+            <button id="jumpToTime">跳转到时间</button>
+            <div class="checkbox-group">
+                <input type="checkbox" id="realTimeMode">
+                <label for="realTimeMode">实时模式</label>
+            </div>
+            <div class="status-info" id="timeInfo"></div>
+        </div>
+
+        <div class="panel-section">
+            <h3>卫星列表</h3>
+            <div id="satelliteItems">
+                {% if satellites %}
+                {% for satellite in satellites %}
+                <div class="satellite-item" data-index="{{ loop.index0 }}">
+                    <span class="satellite-name">{{ satellite.name }}</span>
+                    <button class="view-satellite" data-index="{{ loop.index0 }}">查看</button>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div>没有找到卫星数据</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h3>覆盖查询</h3>
+            <label for="latitudeInput">纬度 (-90 到 90):</label>
+            <input type="number" id="latitudeInput" placeholder="39.9087" step="any" min="-90" max="90">
+            <label for="longitudeInput">经度 (-180 到 180):</label>
+            <input type="number" id="longitudeInput" placeholder="116.3975" step="any" min="-180" max="180">
+            <button id="queryButton">查询覆盖时间</button>
+            <div id="queryResults"></div>
+        </div>
+    </div>
+
+    <!-- 时间控制面板 -->
+    <div id="timeControlPanel">
+        <div class="time-control-group">
+            <button id="playPauseButton">▶ 播放</button>
+            <button id="resetTimeButton">重置时间</button>
+        </div>
+        <div class="time-speed-control">
+            <label for="timeSpeedSelect">速度:</label>
+            <select id="timeSpeedSelect">
+                <option value="1">1x</option>
+                <option value="10">10x</option>
+                <option value="60" selected>60x</option>
+                <option value="300">300x</option>
+                <option value="600">600x</option>
+                <option value="3600">3600x</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 自定义JavaScript -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

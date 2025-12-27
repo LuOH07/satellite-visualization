@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+env/
+venv/
+ENV/
+
+# 虚拟环境
+venv/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 配置文件（用于保护你的密钥）
+config.ini
+secrets.py
+*.key

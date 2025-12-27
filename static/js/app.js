@@ -1,3 +1,4 @@
+// app.js - 完整版本（全屏优化版）
 // 等待页面完全加载
 document.addEventListener('DOMContentLoaded', function() {
     console.log("开始初始化Cesium...");
@@ -120,8 +121,51 @@ document.addEventListener('DOMContentLoaded', function() {
         // 设置初始视角
         viewer.camera.setView(initialView);
 
+        // 菜单切换功能
+        function setupMenuToggle() {
+            const menuToggle = document.getElementById('menuToggle');
+            const menuContent = document.getElementById('menuContent');
+            
+            if (menuToggle && menuContent) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (menuContent.style.display === 'block') {
+                        menuContent.style.display = 'none';
+                    } else {
+                        menuContent.style.display = 'block';
+                    }
+                });
+                
+                // 点击其他地方关闭菜单
+                document.addEventListener('click', function() {
+                    menuContent.style.display = 'none';
+                });
+                
+                // 阻止菜单内容点击时冒泡
+                menuContent.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+            }
+        }
+
         // 绑定事件监听器
         function bindEventListeners() {
+            // 设置菜单切换
+            setupMenuToggle();
+            
+            // 侧摆角度滑块
+            const sideAngleSlider = document.getElementById('sideAngleSlider');
+            const sideAngleValue = document.getElementById('sideAngleValue');
+            
+            if (sideAngleSlider && sideAngleValue) {
+                sideAngleSlider.addEventListener('input', function() {
+                    sideAngleValue.textContent = this.value + '°';
+                });
+            }
+            
+            // 更新侧摆角度按钮
+            document.getElementById('updateSideAngle')?.addEventListener('click', updateSideAngle);
+
             // 绑定卫星项点击事件
             document.querySelectorAll('.satellite-item').forEach(item => {
                 item.addEventListener('click', function () {
@@ -148,10 +192,10 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('toggleProjections')?.addEventListener('click', toggleProjections);
             document.getElementById('toggleLabels')?.addEventListener('change', toggleLabels);
             document.getElementById('realTimeMode')?.addEventListener('change', toggleRealTimeMode);
-            document.getElementById('updateSideAngle')?.addEventListener('click', updateSideAngle);
             document.getElementById('playPauseButton')?.addEventListener('click', togglePlayPause);
             document.getElementById('resetTimeButton')?.addEventListener('click', resetTime);
             document.getElementById('timeSpeedSelect')?.addEventListener('change', changeTimeSpeed);
+            document.getElementById('closeResults')?.addEventListener('click', closeQueryResults);
         }
 
         // 延迟绑定事件监听器
@@ -338,8 +382,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // 更新侧摆角度
         function updateSideAngle() {
-            const sideAngleInput = document.getElementById('sideAngleInput');
-            const newAngle = parseFloat(sideAngleInput.value);
+            const sideAngleSlider = document.getElementById('sideAngleSlider');
+            const newAngle = parseFloat(sideAngleSlider.value);
 
             if (isNaN(newAngle) || newAngle < 0 || newAngle > 60) {
                 alert('请输入0到60之间的有效角度');
@@ -347,7 +391,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             currentSideAngle = newAngle;
-            const currentSideAngleElement = document.getElementById('currentSideAngle');
+            
+            // 更新显示
+            const currentSideAngleElement = document.getElementById('sideAngleValue');
             if (currentSideAngleElement) {
                 currentSideAngleElement.textContent = newAngle + '°';
             }
@@ -391,8 +437,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // 查询覆盖 - 调用后端API进行精确计算
         function queryCoverage() {
-            const latitude = parseFloat(document.getElementById('latitudeInput').value);
-            const longitude = parseFloat(document.getElementById('longitudeInput').value);
+            const latitudeInput = document.getElementById('latitudeInput');
+            const longitudeInput = document.getElementById('longitudeInput');
+            
+            if (!latitudeInput || !longitudeInput) {
+                console.error('未找到经纬度输入框');
+                return;
+            }
+            
+            const latitude = parseFloat(latitudeInput.value);
+            const longitude = parseFloat(longitudeInput.value);
 
             if (isNaN(latitude) || isNaN(longitude)) {
                 alert('请输入有效的经纬度坐标');
@@ -400,18 +454,24 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // 验证经纬度范围
-            if (!(-90 <= latitude <= 90)) {
+            if (!(-90 <= latitude && latitude <= 90)) {
                 alert('纬度应在-90到90之间');
                 return;
             }
-            if (!(-180 <= longitude <= 180)) {
+            if (!(-180 <= longitude && longitude <= 180)) {
                 alert('经度应在-180到180之间');
                 return;
             }
 
-            const resultsContainer = document.getElementById('queryResults');
+            const resultsContainer = document.getElementById('queryResultsContent');
             if (resultsContainer) {
                 resultsContainer.innerHTML = '<div class="result-item">计算中，请稍候...</div>';
+            }
+            
+            // 显示查询结果面板
+            const resultsPanel = document.getElementById('queryResultsPanel');
+            if (resultsPanel) {
+                resultsPanel.style.display = 'block';
             }
 
             // 显示查询点在Cesium中
@@ -430,7 +490,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(error => {
                     console.error('查询覆盖时间失败:', error);
-                    const resultsContainer = document.getElementById('queryResults');
+                    const resultsContainer = document.getElementById('queryResultsContent');
                     if (resultsContainer) {
                         resultsContainer.innerHTML = '<div class="result-item error">查询失败: ' + error.message + '</div>';
                     }
@@ -475,7 +535,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // 显示后端API返回的查询结果
         function displayQueryResultsFromAPI(data) {
-            const resultsContainer = document.getElementById('queryResults');
+            const resultsContainer = document.getElementById('queryResultsContent');
             if (!resultsContainer) return;
             
             resultsContainer.innerHTML = '';
@@ -539,6 +599,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // 关闭查询结果
+        function closeQueryResults() {
+            const resultsPanel = document.getElementById('queryResultsPanel');
+            if (resultsPanel) {
+                resultsPanel.style.display = 'none';
+            }
+        }
+
         // 时间设置
         let startTime;
         try {
@@ -556,6 +624,19 @@ document.addEventListener('DOMContentLoaded', function() {
         viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP;
         viewer.clock.multiplier = 60;
 
+        // 更新时间显示
+        function updateTimeDisplay() {
+            const timeDisplay = document.getElementById('currentTimeDisplay');
+            if (timeDisplay) {
+                const currentTime = viewer.clock.currentTime;
+                const date = Cesium.JulianDate.toDate(currentTime);
+                timeDisplay.textContent = date.toLocaleString();
+            }
+        }
+
+        // 监听时间变化更新显示
+        viewer.clock.onTick.addEventListener(updateTimeDisplay);
+        updateTimeDisplay(); // 初始更新
 
         // 模型URL
         const model_url = window.MODEL_URL || "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF/Duck.gltf";
@@ -588,184 +669,179 @@ document.addEventListener('DOMContentLoaded', function() {
             projectionEntities.length = 0;
 
             fetch(`/get_satellite_data?side_angle=${currentSideAngle}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP错误! 状态: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log('成功加载卫星数据:', data);
-                        console.log('卫星数量:', data.length);
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP错误! 状态: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('成功加载卫星数据:', data);
+                    console.log('卫星数量:', data.length);
 
-                        if (data.error) {
-                            throw new Error(data.error);
-                        }
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
 
-                        satellitesData = data;
+                    satellitesData = data;
 
-                        if (data.length === 0) {
-                            if (loadingMessage) {
-                                loadingMessage.innerHTML =
-                                        '<div class="error-message">没有找到卫星数据</div>' +
-                                        '<div>请检查卫星数据文件是否存在</div>';
-                            }
-                            return;
-                        }
-
-                        if (statusInfo) {
-                            statusInfo.textContent =
-                                    `成功加载 ${data.length} 颗卫星，正在创建轨道可视化...`;
-                        }
-
-                        // 创建卫星实体
-                        satellitesData.forEach((sat, index) => {
-                            try {
-                                if (!sat.positions || sat.positions.length < 3) {
-                                    console.warn(`卫星 ${sat.name} 的位置数据无效`);
-                                    return;
-                                }
-
-                                const positions = Cesium.Cartesian3.fromDegreesArrayHeights(sat.positions);
-                                const color = colors[index % colors.length];
-
-                                // 创建轨道
-                                const orbitEntity = viewer.entities.add({
-                                    name: sat.name + '轨道',
-                                    polyline: {
-                                        positions: positions,
-                                        width: 2,
-                                        material: color.withAlpha(0.7),
-                                        clampToGround: false
-                                    },
-                                    show: showOrbits
-                                });
-                                orbitEntities.push(orbitEntity);
-
-                                // 创建左右两侧的地面投影条带
-                                if (sat.leftSwath && sat.leftSwath.length > 0) {
-                                    // 左侧条带
-                                    const leftSwathEntity = viewer.entities.add({
-                                        name: sat.name + '左侧投影',
-                                        polyline: {
-                                            positions: Cesium.Cartesian3.fromDegreesArrayHeights(sat.leftSwath),
-                                            width: 2,
-                                            material: Cesium.Color.WHITE.withAlpha(0.6),
-                                            clampToGround: true
-                                        },
-                                        show: showProjections
-                                    });
-                                    projectionEntities.push(leftSwathEntity);
-                                    console.log(`创建左侧条带: ${sat.name}, 点数: ${sat.leftSwath.length / 3}`);
-                                }
-
-                                if (sat.rightSwath && sat.rightSwath.length > 0) {
-                                    // 右侧条带
-                                    const rightSwathEntity = viewer.entities.add({
-                                        name: sat.name + '右侧投影',
-                                        polyline: {
-                                            positions: Cesium.Cartesian3.fromDegreesArrayHeights(sat.rightSwath),
-                                            width: 2,
-                                            material: Cesium.Color.WHITE.withAlpha(0.6),
-                                            clampToGround: true
-                                        },
-                                        show: showProjections
-                                    });
-                                    projectionEntities.push(rightSwathEntity);
-                                    console.log(`创建右侧条带: ${sat.name}, 点数: ${sat.rightSwath.length / 3}`);
-                                }
-
-                                // 创建卫星位置属性
-                                const satPosition = new Cesium.SampledPositionProperty();
-                                const totalPoints = sat.positions.length / 3;
-                                const timeStep = 24 * 3600 / totalPoints;
-
-                                for (let i = 0; i < positions.length; i++) {
-                                    const time = Cesium.JulianDate.addSeconds(
-                                            startTime,
-                                            i* timeStep,
-                                            new Cesium.JulianDate()
-                                    );
-                                    satPosition.addSample(time, positions[i]);
-                                }
-
-                                // 创建卫星实体
-                                const satEntity = viewer.entities.add({
-                                    name: sat.name,
-                                    position: satPosition,
-                                    orientation: new Cesium.VelocityOrientationProperty(satPosition),
-                                    model: {
-                                        uri: model_url,
-                                        scale: 100000.0,
-                                        minimumPixelSize: 32,
-                                        maximumScale: 200000,
-                                        color: color,
-                                        colorBlendMode: Cesium.ColorBlendMode.MIX,
-                                        colorBlendAmount: 0.5
-                                    },
-                                    path: {
-                                        resolution: 1,
-                                        material: new Cesium.PolylineGlowMaterialProperty({
-                                            glowPower: 0.2,
-                                            color: color
-                                        }),
-                                        width: 3,
-                                        show: false
-                                    },
-                                    label: {
-                                        text: sat.name,
-                                        font: '12pt Microsoft YaHei',
-                                        pixelOffset: new Cesium.Cartesian2(0, -30),
-                                        fillColor: color,
-                                        outlineColor: Cesium.Color.BLACK,
-                                        outlineWidth: 2,
-                                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                                        show: showLabels
-                                    },
-                                    availability: new Cesium.TimeIntervalCollection([
-                                        new Cesium.TimeInterval({
-                                            start: startTime,
-                                            stop: stopTime
-                                        })
-                                    ])
-                                });
-                                satelliteEntities.push(satEntity);
-
-                                console.log(`成功创建卫星实体: ${sat.name}`);
-
-                            } catch (error) {
-                                console.error(`创建卫星 ${sat.name} 实体时出错:`, error);
-                                satelliteEntities.push(null);
-                                orbitEntities.push(null);
-                                projectionEntities.push(null);
-                                projectionEntities.push(null);
-                            }
-                        });
-
-                        // 完成初始化
-                        setTimeout(() => {
-                            if (loadingMessage) {
-                                loadingMessage.style.display = 'none';
-                            }
-                            const timeInfo = document.getElementById('timeInfo');
-                            if (timeInfo) {
-                                timeInfo.textContent =
-                                        `模拟时间范围: 24小时 (${data.length} 颗卫星, 侧摆角: ${currentSideAngle}°)`;
-                            }
-                            console.log('卫星可视化系统初始化完成');
-                        }, 1000);
-
-                    })
-                    .catch(error => {
-                        console.error('加载卫星数据失败:', error);
-                        const loadingMessage = document.getElementById('loadingMessage');
+                    if (data.length === 0) {
                         if (loadingMessage) {
                             loadingMessage.innerHTML =
-                                    '<div class="error-message">加载卫星数据失败</div>' +
-                                    '<div>错误: ' + error.message + '</div>' +
-                                    '<div style="margin-top: 10px;">请检查控制台获取详细信息</div>';
+                                '<div class="error-message">没有找到卫星数据</div>' +
+                                '<div>请检查卫星数据文件是否存在</div>';
+                        }
+                        return;
+                    }
+
+                    if (statusInfo) {
+                        statusInfo.textContent =
+                            `成功加载 ${data.length} 颗卫星，正在创建轨道可视化...`;
+                    }
+
+                    // 创建卫星实体
+                    satellitesData.forEach((sat, index) => {
+                        try {
+                            if (!sat.positions || sat.positions.length < 3) {
+                                console.warn(`卫星 ${sat.name} 的位置数据无效`);
+                                return;
+                            }
+
+                            const positions = Cesium.Cartesian3.fromDegreesArrayHeights(sat.positions);
+                            const color = colors[index % colors.length];
+
+                            // 创建轨道
+                            const orbitEntity = viewer.entities.add({
+                                name: sat.name + '轨道',
+                                polyline: {
+                                    positions: positions,
+                                    width: 2,
+                                    material: color.withAlpha(0.7),
+                                    clampToGround: false
+                                },
+                                show: showOrbits
+                            });
+                            orbitEntities.push(orbitEntity);
+
+                            // 创建左右两侧的地面投影条带
+                            if (sat.leftSwath && sat.leftSwath.length > 0) {
+                                // 左侧条带
+                                const leftSwathEntity = viewer.entities.add({
+                                    name: sat.name + '左侧投影',
+                                    polyline: {
+                                        positions: Cesium.Cartesian3.fromDegreesArrayHeights(sat.leftSwath),
+                                        width: 2,
+                                        material: Cesium.Color.WHITE.withAlpha(0.6),
+                                        clampToGround: true
+                                    },
+                                    show: showProjections
+                                });
+                                projectionEntities.push(leftSwathEntity);
+                                console.log(`创建左侧条带: ${sat.name}, 点数: ${sat.leftSwath.length / 3}`);
+                            }
+
+                            if (sat.rightSwath && sat.rightSwath.length > 0) {
+                                // 右侧条带
+                                const rightSwathEntity = viewer.entities.add({
+                                    name: sat.name + '右侧投影',
+                                    polyline: {
+                                        positions: Cesium.Cartesian3.fromDegreesArrayHeights(sat.rightSwath),
+                                        width: 2,
+                                        material: Cesium.Color.WHITE.withAlpha(0.6),
+                                        clampToGround: true
+                                    },
+                                    show: showProjections
+                                });
+                                projectionEntities.push(rightSwathEntity);
+                                console.log(`创建右侧条带: ${sat.name}, 点数: ${sat.rightSwath.length / 3}`);
+                            }
+
+                            // 创建卫星位置属性
+                            const satPosition = new Cesium.SampledPositionProperty();
+                            const totalPoints = sat.positions.length / 3;
+                            const timeStep = 24 * 3600 / totalPoints;
+
+                            for (let i = 0; i < positions.length; i++) {
+                                const time = Cesium.JulianDate.addSeconds(
+                                    startTime,
+                                    i * timeStep,
+                                    new Cesium.JulianDate()
+                                );
+                                satPosition.addSample(time, positions[i]);
+                            }
+
+                            // 创建卫星实体
+                            const satEntity = viewer.entities.add({
+                                name: sat.name,
+                                position: satPosition,
+                                orientation: new Cesium.VelocityOrientationProperty(satPosition),
+                                model: {
+                                    uri: model_url,
+                                    scale: 100000.0,
+                                    minimumPixelSize: 32,
+                                    maximumScale: 200000,
+                                    color: color,
+                                    colorBlendMode: Cesium.ColorBlendMode.MIX,
+                                    colorBlendAmount: 0.5
+                                },
+                                path: {
+                                    resolution: 1,
+                                    material: new Cesium.PolylineGlowMaterialProperty({
+                                        glowPower: 0.2,
+                                        color: color
+                                    }),
+                                    width: 3,
+                                    show: false
+                                },
+                                label: {
+                                    text: sat.name,
+                                    font: '12pt Microsoft YaHei',
+                                    pixelOffset: new Cesium.Cartesian2(0, -30),
+                                    fillColor: color,
+                                    outlineColor: Cesium.Color.BLACK,
+                                    outlineWidth: 2,
+                                    style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                                    show: showLabels
+                                },
+                                availability: new Cesium.TimeIntervalCollection([
+                                    new Cesium.TimeInterval({
+                                        start: startTime,
+                                        stop: stopTime
+                                    })
+                                ])
+                            });
+                            satelliteEntities.push(satEntity);
+
+                            console.log(`成功创建卫星实体: ${sat.name}`);
+
+                        } catch (error) {
+                            console.error(`创建卫星 ${sat.name} 实体时出错:`, error);
+                            satelliteEntities.push(null);
+                            orbitEntities.push(null);
+                            projectionEntities.push(null);
+                            projectionEntities.push(null);
                         }
                     });
+
+                    // 完成初始化
+                    setTimeout(() => {
+                        if (loadingMessage) {
+                            loadingMessage.style.display = 'none';
+                        }
+                        console.log('卫星可视化系统初始化完成');
+                    }, 1000);
+
+                })
+                .catch(error => {
+                    console.error('加载卫星数据失败:', error);
+                    const loadingMessage = document.getElementById('loadingMessage');
+                    if (loadingMessage) {
+                        loadingMessage.innerHTML =
+                            '<div class="error-message">加载卫星数据失败</div>' +
+                            '<div>错误: ' + error.message + '</div>' +
+                            '<div style="margin-top: 10px;">请检查控制台获取详细信息</div>';
+                    }
+                });
         }
 
         // 初始加载卫星数据
@@ -776,9 +852,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const loadingMessage = document.getElementById('loadingMessage');
         if (loadingMessage) {
             loadingMessage.innerHTML =
-                    '<div class="error-message">初始化失败</div>' +
-                    '<div>错误: ' + error.message + '</div>' +
-                    '<div>请检查控制台获取详细信息</div>';
+                '<div class="error-message">初始化失败</div>' +
+                '<div>错误: ' + error.message + '</div>' +
+                '<div>请检查控制台获取详细信息</div>';
         }
         
         // 提供更多调试信息

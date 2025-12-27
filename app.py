@@ -27,8 +27,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 # Cesium访问令牌 - 请确保这是有效的令牌
-CESIUM_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIxNGRhYWIwZC04NWViLTRmZGQtYjUzYi0wNWZkOWIwZjk2ODYiLCJpZCI6Mjg0NzE1LCJpYXQiOjE3NDIxMjQxMzd9.1L80F32tScGa1qLa3-3dlUf9sNPYgAR4tAuCK9qxrNY"
-
+try:
+    from config import CESIUM_TOKEN
+except ImportError:
+    CESIUM_TOKEN = ""
+    
 # 模型URL - 使用一个可靠的卫星模型
 MODEL_URL = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF/Duck.gltf"
 

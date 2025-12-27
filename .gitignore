@@ -1,20 +1,19 @@
+# 配置文件（必须忽略）
+config.py
+*.key
+*.secret
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 .env
 env/
-venv/
-ENV/
 
 # 虚拟环境
 venv/
+ENV/
 
 # 系统文件
 .DS_Store
 Thumbs.db
-
-# 配置文件（用于保护你的密钥）
-config.ini
-secrets.py
-*.key
